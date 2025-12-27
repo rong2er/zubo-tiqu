@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>IPTV解析终端</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.cells.min.js"></script>
+    <style>
+        :root {
+            /* 配合绿色细胞背景的配色 */
+            --高亮绿: #ccff00;
+            --深透黑: rgba(0, 0, 0, 0.65); 
+            --边框光: rgba(255, 255, 255, 0.15);
+        }
+
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Microsoft YaHei", sans-serif; }
+
+        /* --- 1. Vanta.js 背景容器 --- */
+        #vanta-bg {
+            position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%;
+            z-index: 0; /* 最底层 */
+        }
+
+        /* --- 2. 主界面 --- */
+        .app-wrapper {
+            position: relative; z-index: 10; height: 100vh; padding: 25px;
+            display: flex; flex-direction: column;
+        }
+
+        /* 标题 */
+        header h1 {
+            color: #fff; text-align: center; font-size: 28px; letter-spacing: 6px; font-weight: bold;
+            margin: 0 0 20px 0; text-shadow: 0 0 15px rgba(0,0,0,0.8);
+            text-transform: uppercase;
+        }
+
+        /* 搜索条：深色磨砂 */
+        .search-container {
+            background: rgba(0, 20, 0, 0.4);
+            backdrop-filter: blur(5px);
+            border: 1px solid var(--边框光);
+            border-radius: 12px; padding: 12px 25px;
+            display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+            transition: 0.3s;
+        }
+        .search-container:hover { border-color: var(--高亮绿); background: rgba(0, 30, 0, 0.6); }
+        .search-container input {
+            flex: 1; background: transparent; border: none; color: #fff;
+            font-size: 16px; outline: none; font-weight: bold;
+        }
+        .search-icon { font-size: 20px; color: var(--高亮绿); }
+
+        /* 布局 */
+        .layout-grid { display: flex; gap: 20px; flex: 1; min-height: 0; }
+        
+        /* 面板：深色半透明，保证在亮背景下文字清晰 */
+        .panel {
+            background: var(--深透黑);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--边框光);
+            border-radius: 16px; display: flex; flex-direction: column; padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transition: 0.3s;
+        }
+        .panel:hover { border-color: rgba(255,255,255,0.4); }
+        
+        .panel-left { flex: 2; }
+        .panel-right { flex: 3; }
+
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .panel-title { color: #ddd; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+
+        /* 数量高亮 */
+        .counter-badge {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 5px 15px; border-radius: 20px;
+            border: 1px solid var(--高亮绿);
+            box-shadow: 0 0 10px var(--高亮绿);
+            display: flex; align-items: baseline;
+        }
+        .num-highlight { color: var(--高亮绿); font-size: 18px; font-weight: 900; font-family: monospace; }
+        .num-total { color: #aaa; font-size: 12px; margin-left: 6px; }
+
+        /* 输入输出框 */
+        textarea {
+            flex: 1; background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px; padding: 15px; color: #fff;
+            font-family: monospace; font-size: 14px;
+            line-height: 1.6; resize: none; outline: none;
+            transition: 0.3s;
+        }
+        textarea:focus { background: rgba(0, 0, 0, 0.6); border-color: var(--高亮绿); }
+        #output-text { color: #eeffaa; } /* 结果文字微黄，配合背景 */
+
+        /* 按钮 */
+        footer { padding: 20px 0; display: flex; justify-content: flex-end; gap: 15px; }
+        button {
+            padding: 12px 35px; border-radius: 25px; font-size: 14px; font-weight: bold;
+            cursor: pointer; transition: 0.3s; border: none; color: #fff;
+            backdrop-filter: blur(4px);
+        }
+        .btn-clear { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-clear:hover { background: rgba(255,255,255,0.2); }
+        
+        .btn-run { 
+            background: linear-gradient(135deg, #7db300, #4d8000); 
+            box-shadow: 0 4px 15px rgba(100, 200, 0, 0.4);
+            color: #fff;
+        }
+        .btn-run:hover { transform: scale(1.05); filter: brightness(1.2); }
+
+        .btn-copy { background: #008c8c; }
+        .btn-copy:hover { background: #00aaaa; }
+    </style>
+</head>
+<body>
+
+    <div id="vanta-bg"></div>
+
+    <div class="app-wrapper">
+        <header><h1>IPTV解析终端</h1></header>
+
+        <div class="search-container">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="filterInput" placeholder="输入关键字 (如 CCTV, 239.1.1.1) 实时筛选..." oninput="doSearch()">
+        </div>
+
+        <div class="layout-grid">
+            <div class="panel panel-left">
+                <div class="panel-header"><span class="panel-title">源数据 / SOURCE</span></div>
+                <textarea id="inputText" placeholder="在此粘贴抓包原始数据..."></textarea>
+            </div>
+
+            <div class="panel panel-right">
+                <div class="panel-header">
+                    <span class="panel-title">提取结果 / RESULT</span>
+                    <div class="counter-badge">
+                        <span class="num-highlight" id="countCurr">0</span>
+                        <span class="num-total" id="countTotal">/ 0 频道</span>
+                    </div>
+                </div>
+                <textarea id="output-text" readonly placeholder="提取结果将显示在此处..."></textarea>
+            </div>
+        </div>
+
+        <footer>
+            <button class="btn-clear" onclick="clearAll()">清空内容</button>
+            <button class="btn-run" onclick="runExtract()">🚀 开始解析</button>
+            <button class="btn-copy" onclick="copyRes()">📋 复制结果</button>
+        </footer>
+    </div>
+
+    <script>
+        // --- 初始化 Vanta.js Cells 特效 ---
+        // 参数已根据你的链接和截图进行 1:1 还原
+        window.addEventListener('load', function() {
+            VANTA.CELLS({
+                el: "#vanta-bg",
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                color1: 0x8c8c,      // 截图中的青绿色
+                color2: 0xf2e735,    // 截图中的黄绿色
+                size: 1.80,          // 细胞大小
+                speed: 1.60          // 蠕动速度
+            })
+        });
+
+        // --- 业务逻辑 ---
+        let db = [];
+        const keywords = ["Name", "channelName", "Caption", "Title", "StationName", "ServiceName", "dispname"];
+
+        function runExtract() {
+            const txt = document.getElementById('inputText').value;
+            if (!txt.trim()) return;
+
+            const urlReg = /((?:rtp|udp|http|https|rtsp):\/\/[^\s"\'<>,\{\}\[\]]+)/gi;
+            const altReg = /"(?:multicastUrl|playUrl|url)"\s*:\s*"([^"]+)"/gi;
+            
+            let urls = []; let m;
+            while ((m = urlReg.exec(txt)) !== null) urls.push({ u: m[1], i: m.index });
+            while ((m = altReg.exec(txt)) !== null) {
+                let u = m[1]; 
+                if (!u.match(/^(http|rtp|udp|rtsp)/) && u.match(/(\d+\.){3}\d+/)) u = "rtp://" + u;
+                urls.push({ u: u, i: m.index });
+            }
+
+            if (urls.length === 0) return;
+
+            let names = [];
+            const nameReg = new RegExp(`(?:\"|\\b)(?:${keywords.join("|")})(?:\"|\\b)\\s*[:=]\\s*\"([^\"]+)\"`, "gi");
+            while ((m = nameReg.exec(txt)) !== null) names.push({ n: m[1], i: m.index });
+
+            db = []; let seen = new Set();
+            urls.forEach(item => {
+                if (seen.has(item.u)) return; seen.add(item.u);
+                let name = "未知频道", dist = 3000;
+                names.forEach(n => {
+                    let d = Math.abs(item.i - n.i);
+                    if (d < dist) { dist = d; name = n.n; }
+                });
+                db.push(`${name},${item.u}`);
+            });
+            doSearch();
+        }
+
+        function doSearch() {
+            const kw = document.getElementById('filterInput').value.trim().toLowerCase();
+            const res = db.filter(h => h.toLowerCase().includes(kw));
+            document.getElementById('output-text').value = res.join("\n");
+            document.getElementById('countCurr').innerText = res.length;
+            document.getElementById('countTotal').innerText = `/ ${db.length} 频道`;
+        }
+
+        function clearAll() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('output-text').value = '';
+            document.getElementById('filterInput').value = '';
+            db = []; 
+            document.getElementById('countCurr').innerText = '0';
+            document.getElementById('countTotal').innerText = '/ 0 频道';
+        }
+
+        function copyRes() {
+            const el = document.getElementById('output-text');
+            if(!el.value) return;
+            el.select(); document.execCommand('copy');
+        }
+    </script>
+</body>
+</html>
