@@ -155,7 +155,6 @@
 
     <script>
         // --- 初始化 Vanta.js Cells 特效 ---
-        // 参数已根据你的链接和截图进行 1:1 还原
         window.addEventListener('load', function() {
             VANTA.CELLS({
                 el: "#vanta-bg",
@@ -165,10 +164,10 @@
                 minHeight: 200.00,
                 minWidth: 200.00,
                 scale: 1.00,
-                color1: 0x8c8c,      // 截图中的青绿色
-                color2: 0xf2e735,    // 截图中的黄绿色
-                size: 1.80,          // 细胞大小
-                speed: 1.60          // 蠕动速度
+                color1: 0x8c8c,
+                color2: 0xf2e735,
+                size: 1.80,
+                speed: 1.60
             })
         });
 
@@ -180,14 +179,16 @@
             const txt = document.getElementById('inputText').value;
             if (!txt.trim()) return;
 
-            const urlReg = /((?:rtp|udp|http|https|rtsp):\/\/[^\s"\'<>,\{\}\[\]]+)/gi;
+            // 核心修改：增加了 igmp 协议的匹配
+            const urlReg = /((?:rtp|udp|http|https|rtsp|igmp):\/\/[^\s"\'<>,\{\}\[\]]+)/gi;
             const altReg = /"(?:multicastUrl|playUrl|url)"\s*:\s*"([^"]+)"/gi;
             
             let urls = []; let m;
             while ((m = urlReg.exec(txt)) !== null) urls.push({ u: m[1], i: m.index });
             while ((m = altReg.exec(txt)) !== null) {
                 let u = m[1]; 
-                if (!u.match(/^(http|rtp|udp|rtsp)/) && u.match(/(\d+\.){3}\d+/)) u = "rtp://" + u;
+                // 核心修改：防止对已带有 igmp 头的地址重复处理
+                if (!u.match(/^(http|rtp|udp|rtsp|igmp)/) && u.match(/(\d+\.){3}\d+/)) u = "rtp://" + u;
                 urls.push({ u: u, i: m.index });
             }
 
