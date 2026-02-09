@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <title>IPTV解析终端</title>
@@ -9,30 +10,54 @@
         :root {
             /* 配合绿色细胞背景的配色 */
             --高亮绿: #ccff00;
-            --深透黑: rgba(0, 0, 0, 0.65); 
+            --深透黑: rgba(0, 0, 0, 0.65);
             --边框光: rgba(255, 255, 255, 0.15);
         }
 
-        * { box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Microsoft YaHei", sans-serif; }
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
 
         /* --- 1. Vanta.js 背景容器 --- */
         #vanta-bg {
-            position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%;
-            z-index: 0; /* 最底层 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            /* 最底层 */
         }
 
         /* --- 2. 主界面 --- */
         .app-wrapper {
-            position: relative; z-index: 10; height: 100vh; padding: 25px;
-            display: flex; flex-direction: column;
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
         }
 
         /* 标题 */
         header h1 {
-            color: #fff; text-align: center; font-size: 28px; letter-spacing: 6px; font-weight: bold;
-            margin: 0 0 20px 0; text-shadow: 0 0 15px rgba(0,0,0,0.8);
+            color: #fff;
+            text-align: center;
+            font-size: 28px;
+            letter-spacing: 6px;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+            text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
             text-transform: uppercase;
         }
 
@@ -41,87 +66,191 @@
             background: rgba(0, 20, 0, 0.4);
             backdrop-filter: blur(5px);
             border: 1px solid var(--边框光);
-            border-radius: 12px; padding: 12px 25px;
-            display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
             transition: 0.3s;
         }
-        .search-container:hover { border-color: var(--高亮绿); background: rgba(0, 30, 0, 0.6); }
-        .search-container input {
-            flex: 1; background: transparent; border: none; color: #fff;
-            font-size: 16px; outline: none; font-weight: bold;
+
+        .search-container:hover {
+            border-color: var(--高亮绿);
+            background: rgba(0, 30, 0, 0.6);
         }
-        .search-icon { font-size: 20px; color: var(--高亮绿); }
+
+        .search-container input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            font-weight: bold;
+        }
+
+        .search-icon {
+            font-size: 20px;
+            color: var(--高亮绿);
+        }
 
         /* 布局 */
-        .layout-grid { display: flex; gap: 20px; flex: 1; min-height: 0; }
-        
+        .layout-grid {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+
         /* 面板：深色半透明，保证在亮背景下文字清晰 */
         .panel {
             background: var(--深透黑);
             backdrop-filter: blur(10px);
             border: 1px solid var(--边框光);
-            border-radius: 16px; display: flex; flex-direction: column; padding: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             transition: 0.3s;
         }
-        .panel:hover { border-color: rgba(255,255,255,0.4); }
-        
-        .panel-left { flex: 2; }
-        .panel-right { flex: 3; }
 
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .panel-title { color: #ddd; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .panel-left {
+            flex: 2;
+        }
+
+        .panel-right {
+            flex: 3;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .panel-title {
+            color: #ddd;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
 
         /* 数量高亮 */
         .counter-badge {
             background: rgba(0, 0, 0, 0.6);
-            padding: 5px 15px; border-radius: 20px;
+            padding: 5px 15px;
+            border-radius: 20px;
             border: 1px solid var(--高亮绿);
             box-shadow: 0 0 10px var(--高亮绿);
-            display: flex; align-items: baseline;
+            display: flex;
+            align-items: baseline;
         }
-        .num-highlight { color: var(--高亮绿); font-size: 18px; font-weight: 900; font-family: monospace; }
-        .num-total { color: #aaa; font-size: 12px; margin-left: 6px; }
+
+        .num-highlight {
+            color: var(--高亮绿);
+            font-size: 18px;
+            font-weight: 900;
+            font-family: monospace;
+        }
+
+        .num-total {
+            color: #aaa;
+            font-size: 12px;
+            margin-left: 6px;
+        }
 
         /* 输入输出框 */
         textarea {
-            flex: 1; background: rgba(0, 0, 0, 0.3);
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px; padding: 15px; color: #fff;
-            font-family: monospace; font-size: 14px;
-            line-height: 1.6; resize: none; outline: none;
+            border-radius: 10px;
+            padding: 15px;
+            color: #fff;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
             transition: 0.3s;
         }
-        textarea:focus { background: rgba(0, 0, 0, 0.6); border-color: var(--高亮绿); }
-        #output-text { color: #eeffaa; } /* 结果文字微黄，配合背景 */
+
+        textarea:focus {
+            background: rgba(0, 0, 0, 0.6);
+            border-color: var(--高亮绿);
+        }
+
+        #output-text {
+            color: #eeffaa;
+        }
+
+        /* 结果文字微黄，配合背景 */
 
         /* 按钮 */
-        footer { padding: 20px 0; display: flex; justify-content: flex-end; gap: 15px; }
+        footer {
+            padding: 20px 0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
         button {
-            padding: 12px 35px; border-radius: 25px; font-size: 14px; font-weight: bold;
-            cursor: pointer; transition: 0.3s; border: none; color: #fff;
+            padding: 12px 35px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            border: none;
+            color: #fff;
             backdrop-filter: blur(4px);
         }
-        .btn-clear { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); }
-        .btn-clear:hover { background: rgba(255,255,255,0.2); }
-        
-        .btn-run { 
-            background: linear-gradient(135deg, #7db300, #4d8000); 
+
+        .btn-clear {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-clear:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, #7db300, #4d8000);
             box-shadow: 0 4px 15px rgba(100, 200, 0, 0.4);
             color: #fff;
         }
-        .btn-run:hover { transform: scale(1.05); filter: brightness(1.2); }
 
-        .btn-copy { background: #008c8c; }
-        .btn-copy:hover { background: #00aaaa; }
+        .btn-run:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+
+        .btn-copy {
+            background: #008c8c;
+        }
+
+        .btn-copy:hover {
+            background: #00aaaa;
+        }
     </style>
 </head>
+
 <body>
 
     <div id="vanta-bg"></div>
 
     <div class="app-wrapper">
-        <header><h1>IPTV解析终端</h1></header>
+        <header>
+            <h1>IPTV解析终端</h1>
+        </header>
 
         <div class="search-container">
             <span class="search-icon">🔍</span>
@@ -155,7 +284,7 @@
 
     <script>
         // --- 初始化 Vanta.js Cells 特效 ---
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             VANTA.CELLS({
                 el: "#vanta-bg",
                 mouseControls: true,
@@ -171,68 +300,388 @@
             })
         });
 
-        // --- 业务逻辑 ---
-        let db = [];
-        const keywords = ["Name", "channelName", "Caption", "Title", "StationName", "ServiceName", "dispname"];
+        // --- 业务逻辑 (Python 移植版 V36.2) ---
 
+        // 1. 辅助函数
+        function cleanUrl(u) {
+            if (!u) return "";
+            u = u.trim().replace(/['"<>]/g, "");
+
+            // [V36.20] 增强正则：彻底移除各种 FCC 相关参数
+            u = u.replace(/([?&])(?:Channel\d*)?FCC(?:IP|Port)=[^&]*/gi, '$1');
+            u = u.replace(/^(?:Channel\d*)?FCC(?:IP|Port)=[^&]*&?/gi, '');
+
+            // 修复替换后产生的空参数、重复符号及尾部残留
+            u = u.replace(/\?&/g, '?').replace(/&&/g, '&');
+            u = u.replace(/[?&]$/, '');
+
+            // 移除尾部多余标点 (包括反斜杠)
+            u = u.replace(/[,;)\\]+$/, "");
+
+            // [V36.29] 针对 RTP/UDP/IGMP 的去噪：只保留核心地址段
+            const m = u.match(/^((?:rtp|udp|igmp):\/\/@?[\d\.]+(?::\d+)?)/i);
+            if (m) {
+                return m[1];
+            }
+
+            if (u.includes("127.0.0.1")) return "";
+            if (u.includes("0.0.0.0")) return "";
+            return u;
+        }
+
+        function isValidUrl(u) {
+            if (!u || u.length < 7) return false;
+
+            // [过滤图片]
+            // 如果 URL 没有任何查询参数，直接检查后缀
+            const lowerU = u.toLowerCase();
+            const pathPart = lowerU.split('?')[0];
+
+            // 扩展名过滤 (支持尾部带垃圾的情况，如 .png\)
+            if (/\.(jpg|jpeg|png|gif|bmp|ico|svg|css|js)(\\|$|[\?&])/.test(pathPart)) return false;
+
+            // 关键词过滤 (针对路径中的 specific image folders)
+            // 常见图片路径特征: /img/, /images/, /upload/, /poster/, /thumb/, /nn_img/
+            if (/\/img\/|\/images\/|\/upload\/|\/poster\/|\/thumb\/|\/nn_img\//.test(pathPart)) return false;
+
+            // 过滤本地回环和无效IP
+            if (u.includes("127.0.0.1") || u.includes("localhost")) return false;
+
+            // 必须包含协议头
+            if (!/^(rtp|udp|http|https|rtsp|igmp):\/\//i.test(u)) return false;
+
+            return true;
+        }
+
+        function isGarbage(val) {
+            if (!val) return true;
+            val = val.toString().trim();
+            if (val.length < 2) return true;
+            if (/^\d+$/.test(val)) return true; // 纯数字通常不是频道名
+            if (val.toLowerCase() === "null" || val.toLowerCase() === "undefined") return true;
+            if (val.includes("Failed") || val.includes("Error")) return true;
+            return false;
+        }
+
+        function isValidName(name) {
+            if (!name || typeof name !== 'string') return false;
+            name = name.trim();
+            if (name.length > 50 || name.length < 2) return false;
+
+            // 1. 彻底封杀 JS 核心语法字符及常见变量/方法名
+            const junkPatterns = [
+                /[{}[\];=\\]/, // 核心语法符号
+                /\+/ // 拼接符
+            ];
+            // 单词边界匹配
+            const junkWords = [
+                "function", "var", "let", "const", "document", "window", "success", "error",
+                "async", "timeout", "null", "undefined", "true", "false",
+                "data", "result", "obj", "value", "UserID", "parent", "Authentication", "Config",
+                "CTCGetConfig", "CUGetConfig", "substr", "indexof", "length", "split", "Activity"
+            ];
+
+            for (let pat of junkPatterns) {
+                if (pat.test(name)) return false;
+            }
+
+            // 检查单词黑名单 (大小写不敏感)
+            for (let word of junkWords) {
+                if (new RegExp(`\\b${word}\\b`, 'i').test(name)) return false;
+            }
+
+            if (/\.[a-z]{2,10}\(/i.test(name)) return false; // 函数调用 .substr(
+
+            // 2. 过滤 Android 包名 / Activity 名
+            if (/^[a-z]+\.[a-z]+\./i.test(name)) return false;
+
+            // 3. 过滤通用 UI 标签
+            const uiKeywords = new Set([
+                "回看", "国学", "播放记录", "电视剧", "综艺", "直播", "戏曲",
+                "Unknown", "unknown", "null", "None",
+                "高清频道", "标清频道", "我的收藏", "最近观看",
+                "频道列表", "节目单", "关于我们", "系统设置"
+            ]);
+            if (uiKeywords.has(name)) return false;
+
+            // 4. [新增] 针对节目单的启发式过滤
+            if (/决赛|第\d+集|预告/.test(name)) return false;
+
+            return true;
+        }
+
+        // --- V3: 结构化深度感知提取 (Smart Extract V3 Structural) ---
+        function extractFromBlockV3(fullContent, anchorPos) {
+            // 1. 寻找闭合块 (Find Enclosing Block)
+            // 向前寻找最近的 '{'
+            let blockStart = -1;
+            let balance = 0;
+            const limitPos = Math.max(0, anchorPos - 50000);
+
+            for (let i = anchorPos; i >= limitPos; i--) {
+                const char = fullContent[i];
+                if (char === '}') balance++;
+                else if (char === '{') {
+                    balance--;
+                    if (balance === -1) { // 找到了包裹 anchor 的那个 '{'
+                        blockStart = i;
+                        break;
+                    }
+                }
+            }
+            if (blockStart === -1) return null;
+
+            // 向后寻找匹配的 '}'
+            const MAX_SCAN_LEN = 1000000; // 1MB limit
+            let blockEnd = -1;
+            balance = 1; // 起始有一个 '{'
+
+            for (let i = blockStart + 1; i < fullContent.length; i++) {
+                if (i - blockStart > MAX_SCAN_LEN) break;
+
+                const char = fullContent[i];
+                if (char === '{') balance++;
+                else if (char === '}') {
+                    balance--;
+                    if (balance === 0) {
+                        blockEnd = i + 1;
+                        break;
+                    }
+                }
+            }
+            if (blockEnd === -1) return null;
+
+            const originalBlock = fullContent.substring(blockStart, blockEnd);
+
+            // 2. 深度遮罩 (Mask Nested Content)
+            let safeChars = [];
+            let inQuote = false;
+            let depth = 0;
+
+            for (let i = 0; i < originalBlock.length; i++) {
+                const char = originalBlock[i];
+
+                if (char === '"' && (i === 0 || originalBlock[i - 1] !== '\\')) {
+                    inQuote = !inQuote;
+                    safeChars.push(char);
+                    continue;
+                }
+
+                if (inQuote) {
+                    safeChars.push(char);
+                    continue;
+                }
+
+                // 深度追踪
+                if (char === '{') {
+                    depth++;
+                    // depth=1 是当前block本身 (start char), depth>1 是嵌套
+                    // 注意：我们在循环前已经处于 depth=0 (外部)，遇到第一个 { 变 depth=1
+                    // 这里的 originalBlock 是包含首尾 {} 的
+                    if (depth > 1) safeChars.push(' ');
+                    else safeChars.push(char);
+                } else if (char === '}') {
+                    if (depth > 1) safeChars.push(' ');
+                    else safeChars.push(char);
+                    depth--;
+                } else {
+                    if (depth > 1) safeChars.push(' ');
+                    else safeChars.push(char);
+                }
+            }
+
+            const safeStr = safeChars.join('');
+
+            // 3. 在 safeStr 中提取信息
+            // ID Check
+            const idRegex = /"(?:ChannelId|ChannelCode|contentId|serviceId|chid|chId|code|cntpid|UserChannelID|cntpId|Number)"\s*[:=]\s*(?:"([^"]+)"|(\d+))/i;
+            const idMatch = safeStr.match(idRegex);
+            if (!idMatch) return null; // 遮罩后 ID 没了？不应该发生，除非 ID 在深层嵌套里(那就不对)
+
+            const idVal = idMatch[1] || idMatch[2];
+
+            // Name Extraction
+            let nameVal = "Unknown";
+            const nameRegex = /"(?:Caption|channelName|title|channalName|chName|mediaName|bkchname|ChannelName|Name)"\s*[:=]\s*"([^"]+)"/i;
+            const nameMatch = safeStr.match(nameRegex);
+            if (nameMatch) {
+                nameVal = nameMatch[1];
+            }
+
+            // URL Extraction (Find ALL URLs in this safe block)
+            const urlRegex = /"((?:igmp|rtp|udp|http|rtsp|sdp):\/\/[^"]+)"/gi;
+            const results = [];
+
+            let match;
+            while ((match = urlRegex.exec(safeStr)) !== null) {
+                let u = match[1];
+                u = cleanUrl(u);
+                if (isValidUrl(u)) {
+                    if (isValidName(nameVal)) {
+                        results.push({ id: idVal, name: nameVal, url: u });
+                    }
+                }
+            }
+
+            return results.length > 0 ? results : null;
+        }
+
+        // 2. 业务入口
         function runExtract() {
             const txt = document.getElementById('inputText').value;
             if (!txt.trim()) return;
 
-            // 核心修改：增加了 igmp 协议的匹配
-            const urlReg = /((?:rtp|udp|http|https|rtsp|igmp):\/\/[^\s"\'<>,\{\}\[\]]+)/gi;
-            const altReg = /"(?:multicastUrl|playUrl|url)"\s*:\s*"([^"]+)"/gi;
-            
-            let urls = []; let m;
-            while ((m = urlReg.exec(txt)) !== null) urls.push({ u: m[1], i: m.index });
-            while ((m = altReg.exec(txt)) !== null) {
-                let u = m[1]; 
-                // 核心修改：防止对已带有 igmp 头的地址重复处理
-                if (!u.match(/^(http|rtp|udp|rtsp|igmp)/) && u.match(/(\d+\.){3}\d+/)) u = "rtp://" + u;
-                urls.push({ u: u, i: m.index });
+            document.getElementById('output-text').value = "正在解析...";
+
+            setTimeout(() => {
+                const results = coreExtract(txt);
+
+                // 结果去重与排序 (按频道名)
+                results.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+
+                // 格式化输出
+                const outLines = results.map(r => `${r.name},${r.url}`);
+                db = outLines; // 更新全局数据库以便搜索
+
+                document.getElementById('output-text').value = outLines.join("\n");
+                document.getElementById('countCurr').innerText = outLines.length;
+                document.getElementById('countTotal').innerText = `/ ${outLines.length} 频道`;
+                doSearch(); // 触发一次搜索刷新
+            }, 50);
+        }
+
+        function coreExtract(content) {
+            const candidates = [];
+            const seenUrls = new Set();
+
+            // --- V3: 结构化提取 (针对 JSON/XML 片段) ---
+            const anchorPattern = /"(ChannelId|ChannelCode|contentId|serviceId|chid|chId|code|cntpid|UserChannelID|cntpId|Number)"\s*[:=]/gi;
+
+            let match;
+            const processedRanges = []; // [start, end]
+
+            while ((match = anchorPattern.exec(content)) !== null) {
+                const anchorPos = match.index;
+
+                // 检查是否已处理 (简单范围检查)
+                // 这里我们不做复杂的范围区间合并，只做点检查，因为 exec 是线性的
+                // 如果一个 anchor 被包含在之前的 block range 里，跳过
+                let isProcessed = false;
+                for (const range of processedRanges) {
+                    if (anchorPos >= range[0] && anchorPos < range[1]) {
+                        isProcessed = true;
+                        break;
+                    }
+                }
+                if (isProcessed) continue;
+
+                // 尝试结构化提取
+                const extractedItems = extractFromBlockV3(content, anchorPos);
+
+                if (extractedItems) {
+                    // 我们需要估算这个 Block 的结束位置来更新 processedRanges
+                    // 由于 extractFromBlockV3 没有返回 endPos，我们只能保守估计。
+                    // 或者修改 extractFromBlockV3 返回更多信息。
+                    // 为了简化，我们假设如果提取成功，则该ID附近的 2000 字符都算处理过？
+                    // 不，这样不严谨。
+                    // 但鉴于我们已经去重 seenUrls，重复处理只是浪费一点 CPU。
+                    // 我们可以忽略 range update，或者只做一个简单的 forward skip?
+                    // 让 extractRec return block length? 
+                    // 算了，为了代码稳定性，暂不 hack range，依赖 seenUrls 去重即可。
+                    // (Python版是严格处理 range 的，这里 JS 版简化处理)
+
+                    for (const item of extractedItems) {
+                        if (!seenUrls.has(item.url)) {
+                            seenUrls.add(item.url);
+                            candidates.push(item);
+                        }
+                    }
+                }
             }
 
-            if (urls.length === 0) return;
+            // --- V2: 启发式提取 (作为兜底，仅当 V3 没结果时？或者总是跑？) ---
+            // 用户抱怨"结果里有很多图片"，说明 V2 之前的逻辑太激进。
+            // 现在有了 V3 深度提取，且 isValidName 增强了，我们可以尝试跑 V2，
+            // 但必须基于 isValidName 的严格过滤。
 
-            let names = [];
-            const nameReg = new RegExp(`(?:\"|\\b)(?:${keywords.join("|")})(?:\"|\\b)\\s*[:=]\\s*\"([^\"]+)\"`, "gi");
-            while ((m = nameReg.exec(txt)) !== null) names.push({ n: m[1], i: m.index });
+            const urlRegex = /((?:rtp|udp|http|https|rtsp|igmp):\/\/[a-zA-Z0-9.\/?&%=\-_:;]+)/gi;
+            const nameRegex = /"(Caption|channelName|title|Name|name|chName)"\s*[:=]\s*"([^"]+)"/gi;
 
-            db = []; let seen = new Set();
-            urls.forEach(item => {
-                if (seen.has(item.u)) return; seen.add(item.u);
-                let name = "未知频道", dist = 3000;
-                names.forEach(n => {
-                    let d = Math.abs(item.i - n.i);
-                    if (d < dist) { dist = d; name = n.n; }
-                });
-                db.push(`${name},${item.u}`);
-            });
-            doSearch();
+            const allUrls = [];
+            while ((match = urlRegex.exec(content)) !== null) {
+                let u = cleanUrl(match[1]);
+                if (isValidUrl(u) && !seenUrls.has(u)) {
+                    allUrls.push({ u: u, pos: match.index });
+                }
+            }
+
+            if (allUrls.length > 0) {
+                const allNames = [];
+                while ((match = nameRegex.exec(content)) !== null) {
+                    if (isValidName(match[2])) {
+                        allNames.push({ n: match[2], pos: match.index });
+                    }
+                }
+
+                // 距离匹配 V2
+                for (let uItem of allUrls) {
+                    if (seenUrls.has(uItem.u)) continue;
+
+                    let bestName = "Unknown";
+                    let minDist = 1000;
+
+                    for (let nItem of allNames) {
+                        let dist = Math.abs(nItem.pos - uItem.pos);
+                        // 优先找前面的 Name
+                        if (nItem.pos < uItem.pos && dist < 1000) {
+                            if (dist < minDist) {
+                                minDist = dist;
+                                bestName = nItem.n;
+                            }
+                        }
+                        else if (nItem.pos > uItem.pos && dist < 500) {
+                            if (dist * 1.5 < minDist) {
+                                minDist = dist * 1.5;
+                                bestName = nItem.n;
+                            }
+                        }
+                    }
+
+                    if (bestName !== "Unknown") {
+                        seenUrls.add(uItem.u);
+                        candidates.push({ name: bestName, url: uItem.u });
+                    }
+                }
+            }
+
+            return candidates;
         }
+
+        // ------------------------------------
 
         function doSearch() {
             const kw = document.getElementById('filterInput').value.trim().toLowerCase();
+            if (!db) return;
             const res = db.filter(h => h.toLowerCase().includes(kw));
             document.getElementById('output-text').value = res.join("\n");
             document.getElementById('countCurr').innerText = res.length;
-            document.getElementById('countTotal').innerText = `/ ${db.length} 频道`;
         }
 
         function clearAll() {
             document.getElementById('inputText').value = '';
             document.getElementById('output-text').value = '';
             document.getElementById('filterInput').value = '';
-            db = []; 
+            db = [];
             document.getElementById('countCurr').innerText = '0';
             document.getElementById('countTotal').innerText = '/ 0 频道';
         }
 
         function copyRes() {
             const el = document.getElementById('output-text');
-            if(!el.value) return;
+            if (!el.value) return;
             el.select(); document.execCommand('copy');
         }
     </script>
 </body>
+
 </html>
