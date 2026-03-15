@@ -366,48 +366,38 @@
         function isValidName(name) {
             if (!name || typeof name !== 'string') return false;
             name = name.trim();
-            if (name.length > 50 || name.length < 2) return false;
+            if (name.length > 100 || name.length < 2) return false;
 
-            // 1. 彻底封杀 JS 核心语法字符及常见变量/方法名
-            const junkPatterns = [
-                /[{}[\];=\\]/, // 核心语法符号
-                /\+/ // 拼接符
-            ];
-            // 单词边界匹配
-            const junkWords = [
-                "function", "var", "let", "const", "document", "window", "success", "error",
-                "async", "timeout", "null", "undefined", "true", "false",
-                "data", "result", "obj", "value", "UserID", "parent", "Authentication", "Config",
-                "CTCGetConfig", "CUGetConfig", "substr", "indexof", "length", "split", "Activity"
-            ];
-
-            for (let pat of junkPatterns) {
-                if (pat.test(name)) return false;
-            }
-
-            // 检查单词黑名单 (大小写不敏感)
-            for (let word of junkWords) {
-                if (new RegExp(`\\b${word}\\b`, 'i').test(name)) return false;
-            }
-
-            if (/\.[a-z]{2,10}\(/i.test(name)) return false; // 函数调用 .substr(
-
-            // 2. 过滤 Android 包名 / Activity 名
-            if (/^[a-z]+\.[a-z]+\./i.test(name)) return false;
-
-            // 3. 过滤通用 UI 标签
-            const uiKeywords = new Set([
-                "回看", "国学", "播放记录", "电视剧", "综艺", "直播", "戏曲",
-                "Unknown", "unknown", "null", "None",
-                "高清频道", "标清频道", "我的收藏", "最近观看",
-                "频道列表", "节目单", "关于我们", "系统设置"
-            ]);
-            if (uiKeywords.has(name)) return false;
-
-            // 4. [新增] 针对节目单的启发式过滤
-            if (/决赛|第\d+集|预告/.test(name)) return false;
+            // 极简过滤: 只过滤明显的代码片段
+            if (/[{}[\];=\\]/.test(name)) return false; 
+            if (/\b(function|var|let|const|window|document)\b/i.test(name)) return false;
+            
+            // 过滤纯数字
+            if (/^\d+$/.test(name)) return false;
 
             return true;
+        }
+
+        function naturalSortKey(s) {
+            return String(s).split(/(\d+)/).map(text => {
+                const num = parseInt(text, 10);
+                return isNaN(num) ? text.toLowerCase() : num;
+            });
+        }
+
+        function compareNatural(a, b) {
+            const keyA = naturalSortKey(a);
+            const keyB = naturalSortKey(b);
+            for (let i = 0; i < Math.min(keyA.length, keyB.length); i++) {
+                if (typeof keyA[i] === 'number' && typeof keyB[i] === 'number') {
+                    if (keyA[i] !== keyB[i]) return keyA[i] - keyB[i];
+                } else {
+                    const sA = String(keyA[i]);
+                    const sB = String(keyB[i]);
+                    if (sA !== sB) return sA < sB ? -1 : 1;
+                }
+            }
+            return keyA.length - keyB.length;
         }
 
         // --- V3: 结构化深度感知提取 (Smart Extract V3 Structural) ---
@@ -500,12 +490,20 @@
 
             const idVal = idMatch[1] || idMatch[2];
 
-            // Name Extraction
+            // Name Extraction (Priority: Name > channelName > Caption)
             let nameVal = "Unknown";
-            const nameRegex = /"(?:Caption|channelName|title|channalName|chName|mediaName|bkchname|ChannelName|Name)"\s*[:=]\s*"([^"]+)"/i;
-            const nameMatch = safeStr.match(nameRegex);
-            if (nameMatch) {
-                nameVal = nameMatch[1];
+            const namePriorityMap = { 'name': 10, 'channelname': 9, 'caption': 8, 'title': 7, 'channalname': 6, 'chname': 5, 'medianame': 4, 'bkchname': 3, 'label': 2 };
+            const nameRegex = /"(Caption|channelName|title|channalName|chName|mediaName|bkchname|ChannelName|Name)"\s*[:=]\s*"([^"]+)"/gi;
+            let bestScore = -1;
+            let nMatch;
+            while ((nMatch = nameRegex.exec(safeStr)) !== null) {
+                const k = nMatch[1].toLowerCase();
+                const v = nMatch[2];
+                const score = namePriorityMap[k] || 0;
+                if (score > bestScore) {
+                    bestScore = score;
+                    nameVal = v;
+                }
             }
 
             // URL Extraction (Find ALL URLs in this safe block)
@@ -517,12 +515,10 @@
                 let u = match[1];
                 u = cleanUrl(u);
                 if (isValidUrl(u)) {
-                    if (isValidName(nameVal)) {
-                        results.push({ id: idVal, name: nameVal, url: u });
-                    }
+                    // [Fix] 无论是否 validName，都记录到结果中，供 globalIdMap 使用
+                    results.push({ id: idVal, name: nameVal, url: u });
                 }
             }
-
             return results.length > 0 ? results : null;
         }
 
@@ -534,18 +530,70 @@
             document.getElementById('output-text').value = "正在解析...";
 
             setTimeout(() => {
-                const results = coreExtract(txt);
+                const allChannels = coreExtract(txt);
+                
+                // 1. 分组 (按协议)
+                const groups = { 'RTP': [], 'HTTP': [], 'UDP': [], 'RTSP': [], 'Other': [] };
+                allChannels.forEach(item => {
+                    const u = item.url.toLowerCase();
+                    if (u.startsWith('rtp')) groups['RTP'].push(item);
+                    else if (u.startsWith('http')) groups['HTTP'].push(item);
+                    else if (u.startsWith('udp')) groups['UDP'].push(item);
+                    else if (u.startsWith('rtsp')) groups['RTSP'].push(item);
+                    else groups['Other'].push(item);
+                });
 
-                // 结果去重与排序 (按频道名)
-                results.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+                const outLines = [];
+                const protOrder = ['RTP', 'HTTP', 'UDP', 'RTSP', 'Other'];
 
-                // 格式化输出
-                const outLines = results.map(r => `${r.name},${r.url}`);
+                protOrder.forEach(gName => {
+                    let rawList = groups[gName];
+                    if (rawList.length === 0) return;
+
+                    // 2. 排序 (Natural Sort by Name, then URL)
+                    rawList.sort((a, b) => {
+                        const res = compareNatural(a.name, b.name);
+                        return res !== 0 ? res : a.url.localeCompare(b.url);
+                    });
+
+                    // 3. 层级拆分 (Tiered Output)
+                    const tiers = {}; // index -> list
+                    const nameCount = {};
+
+                    rawList.forEach(item => {
+                        if (item.name === "无障碍") return;
+                        
+                        let idx = 0;
+                        if (item.name === "Unknown") {
+                            idx = 0;
+                        } else {
+                            idx = nameCount[item.name] || 0;
+                            nameCount[item.name] = idx + 1;
+                        }
+
+                        if (!tiers[idx]) tiers[idx] = [];
+                        tiers[idx].push(item);
+                    });
+
+                    // 依次输出各个层级
+                    const tIndexes = Object.keys(tiers).map(Number).sort((a, b) => a - b);
+                    tIndexes.forEach(tIdx => {
+                        const suffix = (tIdx === 0) ? "" : `-${tIdx}`;
+                        outLines.push(`[${gName} 频道列表${suffix}]`);
+                        tiers[tIdx].forEach(ch => {
+                            outLines.push(`${ch.name},${ch.url}`);
+                        });
+                        outLines.push(""); // 分组间空行
+                    });
+                });
+
                 db = outLines; // 更新全局数据库以便搜索
-
                 document.getElementById('output-text').value = outLines.join("\n");
-                document.getElementById('countCurr').innerText = outLines.length;
-                document.getElementById('countTotal').innerText = `/ ${outLines.length} 频道`;
+                
+                // 计算实际频道数 (排除分组标题和空行)
+                const actualCount = allChannels.length;
+                document.getElementById('countCurr').innerText = actualCount;
+                document.getElementById('countTotal').innerText = `/ ${actualCount} 频道`;
                 doSearch(); // 触发一次搜索刷新
             }, 50);
         }
@@ -553,45 +601,39 @@
         function coreExtract(content) {
             const candidates = [];
             const seenUrls = new Set();
+            const globalIdMap = {}; // rid/ip -> name
 
             // --- V3: 结构化提取 (针对 JSON/XML 片段) ---
             const anchorPattern = /"(ChannelId|ChannelCode|contentId|serviceId|chid|chId|code|cntpid|UserChannelID|cntpId|Number)"\s*[:=]/gi;
-
             let match;
-            const processedRanges = []; // [start, end]
+            const processedRanges = [];
 
             while ((match = anchorPattern.exec(content)) !== null) {
                 const anchorPos = match.index;
-
-                // 检查是否已处理 (简单范围检查)
-                // 这里我们不做复杂的范围区间合并，只做点检查，因为 exec 是线性的
-                // 如果一个 anchor 被包含在之前的 block range 里，跳过
                 let isProcessed = false;
                 for (const range of processedRanges) {
                     if (anchorPos >= range[0] && anchorPos < range[1]) {
-                        isProcessed = true;
-                        break;
+                        isProcessed = true; break;
                     }
                 }
                 if (isProcessed) continue;
 
-                // 尝试结构化提取
                 const extractedItems = extractFromBlockV3(content, anchorPos);
-
                 if (extractedItems) {
-                    // 我们需要估算这个 Block 的结束位置来更新 processedRanges
-                    // 由于 extractFromBlockV3 没有返回 endPos，我们只能保守估计。
-                    // 或者修改 extractFromBlockV3 返回更多信息。
-                    // 为了简化，我们假设如果提取成功，则该ID附近的 2000 字符都算处理过？
-                    // 不，这样不严谨。
-                    // 但鉴于我们已经去重 seenUrls，重复处理只是浪费一点 CPU。
-                    // 我们可以忽略 range update，或者只做一个简单的 forward skip?
-                    // 让 extractRec return block length? 
-                    // 算了，为了代码稳定性，暂不 hack range，依赖 seenUrls 去重即可。
-                    // (Python版是严格处理 range 的，这里 JS 版简化处理)
-
                     for (const item of extractedItems) {
-                        if (!seenUrls.has(item.url)) {
+                        // 建立全局映射
+                        if (item.id && isValidName(item.name)) globalIdMap[item.id] = item.name;
+                        
+                        const ipMatch = item.url.match(/(\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?)/);
+                        if (ipMatch && isValidName(item.name)) {
+                            // 质量优先：如果已有名称但不含详细标识，而新名称含，则覆盖
+                            const oldName = globalIdMap[ipMatch[1]];
+                            if (!oldName || (item.name.length > oldName.length && /4K|50P|25P|高清/i.test(item.name))) {
+                                globalIdMap[ipMatch[1]] = item.name;
+                            }
+                        }
+
+                        if (!seenUrls.has(item.url) && isValidName(item.name)) {
                             seenUrls.add(item.url);
                             candidates.push(item);
                         }
@@ -599,13 +641,9 @@
                 }
             }
 
-            // --- V2: 启发式提取 (作为兜底，仅当 V3 没结果时？或者总是跑？) ---
-            // 用户抱怨"结果里有很多图片"，说明 V2 之前的逻辑太激进。
-            // 现在有了 V3 深度提取，且 isValidName 增强了，我们可以尝试跑 V2，
-            // 但必须基于 isValidName 的严格过滤。
-
-            const urlRegex = /((?:rtp|udp|http|https|rtsp|igmp):\/\/[a-zA-Z0-9.\/?&%=\-_:;]+)/gi;
-            const nameRegex = /"(Caption|channelName|title|Name|name|chName)"\s*[:=]\s*"([^"]+)"/gi;
+            // --- V2: 启发式提取 (补漏与二次关联) ---
+            const urlRegex = /((?:rtp|udp|http|https|rtsp|igmp|p3p|sdp):\/\/[a-zA-Z0-9.\/?&%=\-_:;@]+)/gi;
+            const nameRegex = /"(Caption|channelName|title|Name|name|chName|channalName|mediaName|bkchname)"\s*[:=]\s*"([^"]+)"/gi;
 
             const allUrls = [];
             while ((match = urlRegex.exec(content)) !== null) {
@@ -615,45 +653,57 @@
                 }
             }
 
-            if (allUrls.length > 0) {
-                const allNames = [];
-                while ((match = nameRegex.exec(content)) !== null) {
-                    if (isValidName(match[2])) {
-                        allNames.push({ n: match[2], pos: match.index });
-                    }
-                }
-
-                // 距离匹配 V2
-                for (let uItem of allUrls) {
-                    if (seenUrls.has(uItem.u)) continue;
-
-                    let bestName = "Unknown";
-                    let minDist = 1000;
-
-                    for (let nItem of allNames) {
-                        let dist = Math.abs(nItem.pos - uItem.pos);
-                        // 优先找前面的 Name
-                        if (nItem.pos < uItem.pos && dist < 1000) {
-                            if (dist < minDist) {
-                                minDist = dist;
-                                bestName = nItem.n;
-                            }
-                        }
-                        else if (nItem.pos > uItem.pos && dist < 500) {
-                            if (dist * 1.5 < minDist) {
-                                minDist = dist * 1.5;
-                                bestName = nItem.n;
-                            }
-                        }
-                    }
-
-                    if (bestName !== "Unknown") {
-                        seenUrls.add(uItem.u);
-                        candidates.push({ name: bestName, url: uItem.u });
-                    }
+            const allNames = [];
+            while ((match = nameRegex.exec(content)) !== null) {
+                if (isValidName(match[2])) {
+                    allNames.push({ k: match[1], n: match[2], pos: match.index });
                 }
             }
 
+            for (let uItem of allUrls) {
+                if (seenUrls.has(uItem.u)) continue;
+
+                let bestName = "Unknown";
+                const ipMatch = uItem.u.match(/(\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?)/);
+                
+                // 1. 全局 IP 匹配 (模仿 Python 版的高精确度)
+                if (ipMatch && globalIdMap[ipMatch[1]]) {
+                    bestName = globalIdMap[ipMatch[1]];
+                } else {
+                    // 2. 距离加权匹配
+                    let minDist = 1000000;
+                    const namePriorityMap = { 'name': 10, 'channelname': 9, 'caption': 8, 'title': 7, 'channalname': 6, 'chname': 5, 'medianame': 4, 'bkchname': 3, 'channelName': 9, 'ChannelName': 9 };
+                    for (let nItem of allNames) {
+                        let diff = nItem.pos - uItem.pos;
+                        let absDist = Math.abs(diff);
+                        if (absDist > 200000) continue; // 距离太远不考虑
+
+                        // 核心改进 1: 方向偏置 (ID 在 URL 之前通常是同一对象，在之后则极大概率是下个对象)
+                        let bias = (diff > 0) ? 10.0 : 1.0; // 在后面则惩罚 10 倍
+
+                        // 核心改进 2: 结构边界检测 (如果中间隔了 "}," 或 "]," 说明跨越了对象)
+                        let penalty = 1.0;
+                        const gap = (diff < 0) ? content.substring(nItem.pos, uItem.pos) : content.substring(uItem.pos, nItem.pos);
+                        if (/[\}\]]\s*[,]/.test(gap)) {
+                            penalty = 1000.0;
+                        }
+
+                        // 核心改进 3: 优先级加权
+                        const score = namePriorityMap[nItem.k] || namePriorityMap[nItem.k.toLowerCase()] || 1;
+                        const weightedDist = absDist * bias * penalty * (12 - score) * 0.1;
+
+                        if (weightedDist < minDist) {
+                            minDist = weightedDist;
+                            bestName = nItem.n;
+                        }
+                    }
+                }
+
+                if (bestName !== "Unknown") {
+                    seenUrls.add(uItem.u);
+                    candidates.push({ name: bestName, url: uItem.u });
+                }
+            }
             return candidates;
         }
 
